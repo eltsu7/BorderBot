@@ -18,12 +18,27 @@ def handlers(updater):
 
     # Tässä alla oleville komennoille annetaan aina bot ja updater argumenteiksi
     dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('help', help))
     dp.add_handler(MessageHandler(Filters.document, picture))
     dp.add_handler(CommandHandler('custom', custom, pass_args=True))
     dp.add_handler(CallbackQueryHandler(button))
 
+
 def start(bot, update):
-    bot.send_message(chat_id=update.message.chat_id, text="Hello! Send me an uncompressed picture!")
+    bot.send_message(chat_id=update.message.chat_id,
+                     text="Hello! Send me an uncompressed picture!")
+
+
+def help(bot, update):
+    help_text = "This bot will save an uncompressed image you send it until you click on one of the buttons or use the /custom command."\
+                "Only the latest image you send will stay saved.\n\n"\
+                "The /custom command takes three agruments. The first two make up the aspect ratio of the final image."\
+                "The third one defines the canvas size. E.g. '/custom 4 5 1.5' first fills in the canvas (with white pixels) so that the picture"\
+                "will be in the correct aspect ratio. Then the program scales the canvas behind the image by the third argument, which will give"\
+                "the picture white frames. The image is then saved and sent to you."
+
+    bot.send_message(chat_id=update.message.chat_id, text=help_text)
+
 
 def picture(bot, update):
     img_id = update.message.document.file_id
@@ -35,15 +50,16 @@ def picture(bot, update):
     keyboard = [[InlineKeyboardButton("1:1", callback_data=1),
                  InlineKeyboardButton("4:5", callback_data=4/5)],
                 [InlineKeyboardButton("16:9", callback_data=16/9),
-                InlineKeyboardButton("9:16", callback_data=9/16)],
+                 InlineKeyboardButton("9:16", callback_data=9/16)],
                 [InlineKeyboardButton("9:19", callback_data=9/19)]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text('Select your desired aspect ratio. Canvas size defaults to 1.1.\n'\
-                                'You can also give custom values by entering:\n'\
-                                '/custom A B C\n'\
-                                'where A:B is aspect ratio(e.g. "3 2" = 3:2)\n'\
-                                'and C is canvas size(e.g. 1.1)', reply_markup=reply_markup)
+    update.message.reply_text('Select your desired aspect ratio. Canvas size defaults to 1.1.\n'
+                              'You can also give custom values by entering:\n'
+                              '/custom A B C\n'
+                              'where A:B is aspect ratio(e.g. "3 2" = 3:2)\n'
+                              'and C is canvas size(e.g. 1.1)', reply_markup=reply_markup)
+
 
 def delete_pictures(update):
     chat_id = update.message.chat.id
@@ -51,6 +67,7 @@ def delete_pictures(update):
 
     os.remove(filename)
     os.remove((PREFIX + filename))
+
 
 def custom(bot, update, args):
     chat_id = update.message.chat.id
@@ -62,21 +79,27 @@ def custom(bot, update, args):
         aspect_ratio = float(int(args[0]) / int(args[1]))
         canvas_size = float(args[2])
     except:
-        bot.send_message(chat_id=update.message.chat_id, text="Incorrect arguments. Try again.")
+        bot.send_message(chat_id=update.message.chat_id,
+                         text="Incorrect arguments. Try again.")
         return
 
     if not 0.2 < aspect_ratio < 5 or not 0 <= canvas_size <= 3:
-        bot.send_message(chat_id=update.message.chat_id, text="Too extreme values. Try again.")
+        bot.send_message(chat_id=update.message.chat_id,
+                         text="Too extreme values. Try again.")
         return
 
     try:
-        brd_pic = borderify(filename, aspect_ratio, canvas_size, (255,255,255))
+        brd_pic = borderify(filename, aspect_ratio,
+                            canvas_size, (255, 255, 255))
     except:
-        bot.send_message(chat_id=update.message.chat_id, text="You need to send me a picture first.")
+        bot.send_message(chat_id=update.message.chat_id,
+                         text="You need to send me a picture first.")
         return
 
-    brd_pic.save(os.path.join(PREFIX+filename), 'JPEG', quality=JPEG_QUALITY, optimize=True)
-    bot.send_document(chat_id=chat_id, document=open((PREFIX + filename), 'rb'))
+    brd_pic.save(os.path.join(PREFIX+filename), 'JPEG',
+                 quality=JPEG_QUALITY, optimize=True)
+    bot.send_document(chat_id=chat_id, document=open(
+        (PREFIX + filename), 'rb'))
 
     delete_pictures(update)
 
@@ -88,21 +111,25 @@ def button(bot, update):
     aspect_ratio = float(query.data)
 
     bot.edit_message_text(text="This will take just a second...",
-                            chat_id=query.message.chat_id,
-                            message_id=query.message.message_id)
+                          chat_id=query.message.chat_id,
+                          message_id=query.message.message_id)
 
     try:
-        brd_pic = borderify(filename, aspect_ratio, CANVAS_SIZE, (255,255,255))
+        brd_pic = borderify(filename, aspect_ratio,
+                            CANVAS_SIZE, (255, 255, 255))
     except:
         bot.edit_message_text(text="You need to send me a picture first.",
-                            chat_id=query.message.chat_id,
-                            message_id=query.message.message_id)
+                              chat_id=query.message.chat_id,
+                              message_id=query.message.message_id)
         return
-    
-    brd_pic.save(os.path.join(PREFIX+filename), 'JPEG', quality=JPEG_QUALITY, optimize=True)
-    bot.send_document(chat_id=chat_id, document=open((PREFIX + filename), 'rb'))
+
+    brd_pic.save(os.path.join(PREFIX+filename), 'JPEG',
+                 quality=JPEG_QUALITY, optimize=True)
+    bot.send_document(chat_id=chat_id, document=open(
+        (PREFIX + filename), 'rb'))
 
     delete_pictures(update)
+
 
 def borderify(name, aspect_ratio=4/5, margin_ratio=1.1, background_color=(255, 255, 255)):
     base = Image.open(name).convert('RGB')
@@ -149,6 +176,7 @@ def main():
     handlers(updater)
 
     updater.start_polling()
+
 
 SETTINGS = file_read("settings.json")
 
