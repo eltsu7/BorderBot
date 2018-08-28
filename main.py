@@ -10,7 +10,7 @@ from PIL import Image
 PREFIX = 'brd_'
 JPEG_QUALITY = 100
 DEFAULT_ASPECT_RATIO = 4/5
-DEFAULT_MARGIN_RATIO = 1.1
+CANVAS_SIZE = 1.1
 
 
 def handlers(updater):
@@ -19,13 +19,13 @@ def handlers(updater):
     # Tässä alla oleville komennoille annetaan aina bot ja updater argumenteiksi
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(MessageHandler(Filters.document, picture))
+    dp.add_handler(CommandHandler('custom', custom, pass_args=True))
     dp.add_handler(CallbackQueryHandler(button))
 
 def start(bot, update):
     bot.send_message(chat_id=update.message.chat_id, text="Hello! Send me an uncompressed picture!")
 
 def picture(bot, update):
-    chat_id = update.message.chat.id
     img_id = update.message.document.file_id
     filename = str(update.message.from_user.id) + '.jpeg'
 
@@ -35,10 +35,47 @@ def picture(bot, update):
     keyboard = [[InlineKeyboardButton("1:1", callback_data=1),
                  InlineKeyboardButton("4:5", callback_data=4/5)],
                 [InlineKeyboardButton("16:9", callback_data=16/9),
-                InlineKeyboardButton("9:16", callback_data=9/16)]]
+                InlineKeyboardButton("9:16", callback_data=9/16)],
+                [InlineKeyboardButton("9:19", callback_data=9/19)]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text('Select your aspect ratio:', reply_markup=reply_markup)
+    update.message.reply_text('Select your desired aspect ratio. Canvas size defaults to 1.1.\n'\
+                                'You can also give custom values by entering:\n'\
+                                '/custom A B C\n'\
+                                'where A:B is aspect ratio(e.g. "3 2" = 3:2)\n'\
+                                'and C is canvas size(e.g. 1.1)', reply_markup=reply_markup)
+
+def delete_pictures(update):
+    chat_id = update.message.chat.id
+    filename = str(chat_id) + '.jpeg'
+
+    os.remove(filename)
+    os.remove((PREFIX + filename))
+
+def custom(bot, update, args):
+    chat_id = update.message.chat.id
+    filename = str(chat_id) + '.jpeg'
+
+    print(args)
+
+    try:
+        aspect_ratio = float(int(args[0]) / int(args[1]))
+        canvas_size = float(args[2])
+    except:
+        bot.send_message(chat_id=update.message.chat_id, text="Incorrect arguments. Try again.")
+        return
+
+    try:
+        brd_pic = borderify(filename, aspect_ratio, canvas_size, (255,255,255))
+    except:
+        bot.send_message(chat_id=update.message.chat_id, text="You need to send me a picture first.")
+        return
+
+    brd_pic.save(os.path.join(PREFIX+filename), 'JPEG', quality=JPEG_QUALITY, optimize=True)
+    bot.send_document(chat_id=chat_id, document=open((PREFIX + filename), 'rb'))
+
+    delete_pictures(update)
+
 
 def button(bot, update):
     query = update.callback_query
@@ -50,13 +87,18 @@ def button(bot, update):
                             chat_id=query.message.chat_id,
                             message_id=query.message.message_id)
 
-    brd_pic = borderify(filename, aspect_ratio, DEFAULT_MARGIN_RATIO, (255,255,255))
+    try:
+        brd_pic = borderify(filename, aspect_ratio, CANVAS_SIZE, (255,255,255))
+    except:
+        bot.edit_message_text(text="You need to send me a picture first.",
+                            chat_id=query.message.chat_id,
+                            message_id=query.message.message_id)
+        return
+    
     brd_pic.save(os.path.join(PREFIX+filename), 'JPEG', quality=JPEG_QUALITY, optimize=True)
-
     bot.send_document(chat_id=chat_id, document=open((PREFIX + filename), 'rb'))
 
-    os.remove(filename)
-    os.remove((PREFIX + filename))
+    delete_pictures(update)
 
 def borderify(name, aspect_ratio=4/5, margin_ratio=1.1, background_color=(255, 255, 255)):
     base = Image.open(name).convert('RGB')
