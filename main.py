@@ -65,6 +65,10 @@ def custom(bot, update, args):
         bot.send_message(chat_id=update.message.chat_id, text="Incorrect arguments. Try again.")
         return
 
+    if not 0.2 < aspect_ratio < 5 or not 0 <= canvas_size <= 3:
+        bot.send_message(chat_id=update.message.chat_id, text="Too extreme values. Try again.")
+        return
+
     try:
         brd_pic = borderify(filename, aspect_ratio, canvas_size, (255,255,255))
     except:
