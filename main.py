@@ -34,7 +34,8 @@ def picture(bot, update):
 
     keyboard = [[InlineKeyboardButton("1:1", callback_data=1),
                  InlineKeyboardButton("4:5", callback_data=4/5)],
-                [InlineKeyboardButton("16:9", callback_data=16/9)]]
+                [InlineKeyboardButton("16:9", callback_data=16/9),
+                InlineKeyboardButton("9:16", callback_data=9/16)]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text('Select your aspect ratio:', reply_markup=reply_markup)
