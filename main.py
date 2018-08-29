@@ -30,14 +30,17 @@ def start(bot, update):
 
 
 def help(bot, update):
-    help_text = "This bot will save an uncompressed image you send it until you click on one of the buttons or use the /custom command."\
+    help_text = "This bot will save an uncompressed image you send it until you click on one of the buttons or use the /custom command. "\
                 "Only the latest image you send will stay saved.\n\n"\
-                "The /custom command takes three agruments. The first two make up the aspect ratio of the final image."\
-                "The third one defines the canvas size. E.g. '/custom 4 5 1.5' first fills in the canvas (with white pixels) so that the picture"\
-                "will be in the correct aspect ratio. Then the program scales the canvas behind the image by the third argument, which will give"\
+                "The /custom command takes three agruments. The first two make up the aspect ratio of the final image. "\
+                "The third one defines the canvas size. E.g. '/custom 4 5 1.5' first fills in the canvas (with white pixels) so that the picture "\
+                "will be in the correct aspect ratio. Then the program scales the canvas behind the image by the third argument, which will give "\
                 "the picture white frames. The image is then saved and sent to you."
 
     bot.send_message(chat_id=update.message.chat_id, text=help_text)
+
+def check_file(fname):
+    return os.path.isfile(fname)
 
 
 def picture(bot, update):
@@ -73,8 +76,6 @@ def custom(bot, update, args):
     chat_id = update.message.chat.id
     filename = str(chat_id) + '.jpeg'
 
-    print(args)
-
     try:
         aspect_ratio = float(int(args[0]) / int(args[1]))
         canvas_size = float(args[2])
@@ -88,10 +89,10 @@ def custom(bot, update, args):
                          text="Too extreme values. Try again.")
         return
 
-    try:
+    if check_file(filename):
         brd_pic = borderify(filename, aspect_ratio,
                             canvas_size, (255, 255, 255))
-    except:
+    else:
         bot.send_message(chat_id=update.message.chat_id,
                          text="You need to send me a picture first.")
         return
@@ -114,10 +115,10 @@ def button(bot, update):
                           chat_id=query.message.chat_id,
                           message_id=query.message.message_id)
 
-    try:
+    if check_file(filename):
         brd_pic = borderify(filename, aspect_ratio,
                             CANVAS_SIZE, (255, 255, 255))
-    except:
+    else:
         bot.edit_message_text(text="You need to send me a picture first.",
                               chat_id=query.message.chat_id,
                               message_id=query.message.message_id)
