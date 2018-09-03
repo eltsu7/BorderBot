@@ -110,11 +110,14 @@ def aspect_ratio(bot, update):
                                                             'You can always /cancel.')
         return CUSTOM_AR
 
-    user = update.message.from_user
     user_id = update.message.from_user.id
+    text = update.message.text
     global data
 
-    data[user_id] = {"ar": update.message.text}
+    a, b = text.split("/")
+    ar = float(int(a)/int(b))
+
+    data[user_id] = {"ar": ar}
 
     move_to_canvas(bot, update)
     return CANVAS_SIZE
