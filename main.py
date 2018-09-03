@@ -30,7 +30,7 @@ PREFIX = 'brd_'
 JPEG_QUALITY = 100
 data = {}
 ASPECT_KEYBOARD = [['1/1', '4/5', '16/9'],['9/16', '9/19', 'Custom']]
-CANVAS_KEYBOARD = [['1', '1.02', '1.05'],['1.1', '1.2', '1.3']]
+CANVAS_KEYBOARD = [['1', '1.02', '1.05'],['1.1', '1.2', 'Custom']]
 ASPECT_QUESTION = 'What aspect ratio are you looking for? \nYou can always /cancel.'
 CANVAS_QUESTION = 'How large do you want your canvas to be? \nYou can always /cancel.'
 
@@ -105,8 +105,9 @@ def photo(bot, update):
 def aspect_ratio(bot, update):
 
     if update.message.text == "Custom":
-        bot.send_message(chat_id=update.message.chat_id, text='Give me an aspect ratio in this from: "a/b". \n'
-                                                            'The value must be between 1/5 and 5/1.')
+        bot.send_message(chat_id=update.message.chat_id, text='Give me an aspect ratio in this from: "a/b". '
+                                                            'The value must be between 1/5 and 5/1. \n'
+                                                            'You can always /cancel.')
         return CUSTOM_AR
 
     user = update.message.from_user
@@ -115,7 +116,8 @@ def aspect_ratio(bot, update):
 
     data[user_id] = {"ar": update.message.text}
 
-    move_to_canvas_state(bot, update)
+    move_to_canvas(bot, update)
+    return CANVAS_SIZE
 
 
 def custom_ar(bot, update):
@@ -137,16 +139,16 @@ def custom_ar(bot, update):
         bot.send_message(chat_id=update.message.chat_id, text='Incorrect value. You have to pick a value between 1/5 and 5/1.')
         return CUSTOM_AR
 
-    move_to_canvas_state(bot, update)
+    move_to_canvas(bot, update)
+    return CANVAS_SIZE
 
 
-def move_to_canvas_state(bot, update):
+
+def move_to_canvas(bot, update):
     user = update.message.from_user
     logger.info("Aspect ratio for %s: %s", user.username, update.message.text)
 
     update.message.reply_text(CANVAS_QUESTION, reply_markup=ReplyKeyboardMarkup(CANVAS_KEYBOARD, one_time_keyboard=True))
-
-    return CANVAS_SIZE
 
 
 def canvas_size(bot, update):
@@ -155,11 +157,45 @@ def canvas_size(bot, update):
     chat_id = update.message.chat.id
     logger.info("Canvas size for %s: %s", user.username, update.message.text)
 
-    global data
+    if update.message.text == "Custom":
+        bot.send_message(chat_id=update.message.chat_id, text='Give me your desired canvas size. '
+                                                            'The value must be between 0 and 3. \n'
+                                                            'You can always /cancel.')
+        return CUSTOM_CS
 
+    global data
     data[user_id]["cs"] = update.message.text
 
-    ar = data[user_id]["ar"]
+    send_photo(bot,update)
+    return ConversationHandler.END
+
+
+def custom_cs(bot, update):
+    user_id = update.message.from_user.id
+    text = update.message.text
+    global data
+
+    try:
+        cs = float(text)
+
+        if 0 <= cs <= 3:
+            data[user_id]["cs"] = text
+        else:
+            raise ValueError
+
+    except (ValueError, TypeError):
+            bot.send_message(chat_id=update.message.chat_id, text='Incorrect value. You have to pick a value between 0 and 3.')
+            return CUSTOM_CS
+
+    send_photo(bot, update)
+    return ConversationHandler.END
+
+
+def send_photo(bot, update):
+    user_id = update.message.from_user.id
+    chat_id = update.message.chat.id
+
+    ar = float(data[user_id]["ar"])
     cs = float(data[user_id]["cs"])
 
     filename = str(user_id) + '.jpeg'
@@ -170,8 +206,6 @@ def canvas_size(bot, update):
     bot.send_document(chat_id=chat_id, document=open((PREFIX + filename), 'rb'))
 
     delete_data(update)
-
-    return ConversationHandler.END
 
 
 def cancel(bot, update):
@@ -224,7 +258,10 @@ def main():
 
             CUSTOM_AR: [MessageHandler(Filters.text, custom_ar)],
 
-            CANVAS_SIZE: [RegexHandler('^(1|1.02|1.05|1.1|1.2|1.3)$', canvas_size)]
+            CANVAS_SIZE: [RegexHandler('^(1|1.02|1.05|1.1|1.2|Custom)$', canvas_size)],
+
+            CUSTOM_CS: [MessageHandler(Filters.text, custom_cs)],
+
         },
 
         fallbacks=[CommandHandler('cancel', cancel)]
