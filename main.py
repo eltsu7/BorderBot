@@ -118,7 +118,6 @@ def aspect_ratio(bot, update):
     ar = float(int(a)/int(b))
 
     data[user_id] = {"ar": ar}
-
     move_to_canvas(bot, update)
     return CANVAS_SIZE
 
@@ -157,7 +156,6 @@ def move_to_canvas(bot, update):
 def canvas_size(bot, update):
     user = update.message.from_user
     user_id = update.message.from_user.id
-    chat_id = update.message.chat.id
     logger.info("Canvas size for %s: %s", user.username, update.message.text)
 
     if update.message.text == "Custom":
