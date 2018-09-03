@@ -20,12 +20,19 @@ bot.
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
-
 import logging
 from PIL import Image
 import os
 import json
 
+ASPECT_RATIO, CANVAS_SIZE, SEND_PHOTO, CUSTOM_AR, CUSTOM_CS = range(5)
+PREFIX = 'brd_'
+JPEG_QUALITY = 100
+data = {}
+ASPECT_KEYBOARD = [['1/1', '4/5', '16/9'],['9/16', '9/19', 'Custom']]
+CANVAS_KEYBOARD = [['1', '1.02', '1.05'],['1.1', '1.2', '1.3']]
+ASPECT_QUESTION = 'What aspect ratio are you looking for? \nYou can always /cancel.'
+CANVAS_QUESTION = 'How large do you want your canvas to be? \nYou can always /cancel.'
 
 # Lue JSON-tiedosto
 def file_read(filename):
@@ -39,10 +46,6 @@ def file_read(filename):
         exit(1)
 
 SETTINGS = file_read("settings.json")
-ASPECT_RATIO, CANVAS_SIZE, SEND_PHOTO = range(3)
-PREFIX = 'brd_'
-JPEG_QUALITY = 100
-data = {}
 
 
 # Enable logging
@@ -93,23 +96,55 @@ def photo(bot, update):
     photo_file = bot.get_file(update.message.document.file_id)
     photo_file.download(str(user_id) + '.jpeg')
 
-    reply_keyboard = [['1/1', '4/5', '16/9'],['9/16', '9/19', '2/1']]
-    update.message.reply_text('What aspect ratio are you looking for?', reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    reply_keyboard = ASPECT_KEYBOARD
+    update.message.reply_text(ASPECT_QUESTION, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
 
     return ASPECT_RATIO
 
 
 def aspect_ratio(bot, update):
+
+    if update.message.text == "Custom":
+        bot.send_message(chat_id=update.message.chat_id, text='Give me an aspect ratio in this from: "a/b". \n'
+                                                            'The value must be between 1/5 and 5/1.')
+        return CUSTOM_AR
+
     user = update.message.from_user
     user_id = update.message.from_user.id
     global data
 
     data[user_id] = {"ar": update.message.text}
 
+    move_to_canvas_state(bot, update)
+
+
+def custom_ar(bot, update):
+    user_id = update.message.from_user.id
+
+    try:
+        text = update.message.text
+
+        a, b = text.split("/")
+        ar = float(int(a)/int(b))
+
+        if 0.2 <= ar <= 5:
+            data[user_id] = {"ar": ar}
+
+        else:
+            raise ValueError
+
+    except (ValueError, TypeError):
+        bot.send_message(chat_id=update.message.chat_id, text='Incorrect value. You have to pick a value between 1/5 and 5/1.')
+        return CUSTOM_AR
+
+    move_to_canvas_state(bot, update)
+
+
+def move_to_canvas_state(bot, update):
+    user = update.message.from_user
     logger.info("Aspect ratio for %s: %s", user.username, update.message.text)
 
-    reply_keyboard = [['1', '1.02', '1.05'],['1.1', '1.2', '1.3']]
-    update.message.reply_text('How large do you want your canvas to be?', reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    update.message.reply_text(CANVAS_QUESTION, reply_markup=ReplyKeyboardMarkup(CANVAS_KEYBOARD, one_time_keyboard=True))
 
     return CANVAS_SIZE
 
@@ -124,7 +159,7 @@ def canvas_size(bot, update):
 
     data[user_id]["cs"] = update.message.text
 
-    ar = eval(data[user_id]["ar"])
+    ar = data[user_id]["ar"]
     cs = float(data[user_id]["cs"])
 
     filename = str(user_id) + '.jpeg'
@@ -134,18 +169,18 @@ def canvas_size(bot, update):
     pic.save(os.path.join(PREFIX+filename), 'JPEG', quality=JPEG_QUALITY, optimize=True)
     bot.send_document(chat_id=chat_id, document=open((PREFIX + filename), 'rb'))
 
-    delete_pictures(update)
+    delete_data(update)
 
     return ConversationHandler.END
 
 
 def cancel(bot, update):
     user = update.message.from_user
-    user_id = update.message.from_user.id
 
     logger.info("User %s canceled the conversation.", user.username)
-    update.message.reply_text('Bye! I hope we can talk again some day.',
-                              reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text("See you later! I've deleted everything you've sent me. :)", reply_markup=ReplyKeyboardRemove())
+
+    delete_data(update)
 
     return ConversationHandler.END
 
@@ -154,12 +189,22 @@ def error(bot, update, error):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, error)
 
-def delete_pictures(update):
+def delete_data(update):
+    user_id = update.message.from_user.id
+
+    global data
+    if user_id in data:
+        del data[user_id]
+
     chat_id = update.message.chat.id
     filename = str(chat_id) + '.jpeg'
 
     os.remove(filename)
-    os.remove((PREFIX + filename))
+
+    try:
+        os.remove((PREFIX + filename))
+    except FileNotFoundError:
+        pass
 
 
 def main():
@@ -175,7 +220,9 @@ def main():
 
         states={
             # TODO custom values
-            ASPECT_RATIO: [RegexHandler('^(1/1|4/5|16/9|9/16|9/19|2/1)$', aspect_ratio)],
+            ASPECT_RATIO: [RegexHandler('^(1/1|4/5|16/9|9/16|9/19|Custom)$', aspect_ratio)],
+
+            CUSTOM_AR: [MessageHandler(Filters.text, custom_ar)],
 
             CANVAS_SIZE: [RegexHandler('^(1|1.02|1.05|1.1|1.2|1.3)$', canvas_size)]
         },
