@@ -196,6 +196,8 @@ def send_photo(bot, update):
     user_id = update.message.from_user.id
     chat_id = update.message.chat.id
 
+    update.message.reply_text("Thanks! This will take a few seconds :).", reply_markup=ReplyKeyboardRemove())
+
     ar = float(data[user_id]["ar"])
     cs = float(data[user_id]["cs"])
 
