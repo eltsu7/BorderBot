@@ -91,7 +91,19 @@ def borderify(name, aspect_ratio=4/5, margin_ratio=1.1, background_color=(255, 2
 def photo(bot, update):
     user = update.message.from_user
     user_id = update.message.from_user.id
-    logger.info("%s sent a photo", user.username)
+    logger.info("%s sent a file", user.username)
+
+    valid_file_types = ["image/png", "image/jpeg"]
+
+    if update.message.document.mime_type not in valid_file_types:
+        logger.info("%s's file was not a picture", user.username)
+        bot.send_message(chat_id=update.message.chat_id, text="The picture must be in .png or .jpeg format!")
+        return ConversationHandler.END
+
+    if update.message.document.file_size > 5100000:
+        logger.info("%s's picture was over 5 MB", user.username)
+        bot.send_message(chat_id=update.message.chat_id, text="The picture must be 5 MB or less!")
+        return ConversationHandler.END
 
     photo_file = bot.get_file(update.message.document.file_id)
     photo_file.download(str(user_id) + '.jpeg')
