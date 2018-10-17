@@ -28,11 +28,12 @@ import json
 ASPECT_RATIO, CANVAS_SIZE, SEND_PHOTO, CUSTOM_AR, CUSTOM_CS = range(5)
 PREFIX = 'brd_'
 JPEG_QUALITY = 100
-data = {}
 ASPECT_KEYBOARD = [['1/1', '4/5', '16/9'],['9/16', '9/19', 'Custom']]
 CANVAS_KEYBOARD = [['1', '1.02', '1.05'],['1.1', '1.2', 'Custom']]
 ASPECT_QUESTION = 'What aspect ratio are you looking for? \nYou can always /cancel.'
 CANVAS_QUESTION = 'How large do you want your canvas to be? \nYou can always /cancel.'
+data = {}
+
 
 # Lue JSON-tiedosto
 def file_read(filename):
@@ -256,6 +257,18 @@ def delete_data(update):
         pass
 
 
+def compressed_photo(bot, update):
+    chat_id = update.message.chat.id
+    user = update.message.from_user
+
+    logger.info("User %s sent a compressed image.", user.username)
+
+    reply = "Please send me the photo uncompressed.\n" \
+            "(Attach -> file -> gallery)"
+
+    bot.send_message(chat_id=chat_id, text=reply)
+
+
 def main():
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(SETTINGS["tg_token"])
@@ -284,6 +297,8 @@ def main():
 
     dp.add_handler(conv_handler)
     dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('help', help))
+    dp.add_handler(MessageHandler(Filters.photo, compressed_photo))
 
 
     # log all errors
