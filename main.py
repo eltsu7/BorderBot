@@ -269,6 +269,14 @@ def compressed_photo(bot, update):
     bot.send_message(chat_id=chat_id, text=reply)
 
 
+def help(bot, update):
+    txt =   "1. Send an uncompressed image\n" \
+            "2. Press buttons\n" \
+            "3. ???\n" \
+            "4. Profit"
+
+    bot.send_message(chat_id=update.message.chat.id, text=txt)
+
 def main():
     # Create the EventHandler and pass it your bot's token.
     updater = Updater(SETTINGS["tg_token"])
