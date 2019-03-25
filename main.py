@@ -109,11 +109,21 @@ def photo(bot, update):
     photo_file = bot.get_file(update.message.document.file_id)
     photo_file.download(str(user_id) + '.jpeg')
 
+    if user_id in data:
+        if "cs" in data[user_id] and "ar" in data[user_id]:
+            send_photo(bot, update)
+            return
+
+    return START_CONV
+
+
+def start_conv(bot, update):
+
     reply_keyboard = ASPECT_KEYBOARD
     update.message.reply_text(ASPECT_QUESTION, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
 
     return ASPECT_RATIO
-
+    
 
 def aspect_ratio(bot, update):
 
@@ -242,10 +252,6 @@ def error(bot, update, error):
 def delete_data(update):
     user_id = update.message.from_user.id
 
-    global data
-    if user_id in data:
-        del data[user_id]
-
     chat_id = update.message.chat.id
     filename = str(chat_id) + '.jpeg'
 
@@ -269,6 +275,10 @@ def compressed_photo(bot, update):
     bot.send_message(chat_id=chat_id, text=reply)
 
 
+def settings(bot, update):
+
+
+
 def help(bot, update):
     txt =   "1. Send an uncompressed image\n" \
             "2. Press buttons\n" \
@@ -289,7 +299,9 @@ def main():
         entry_points=[MessageHandler(Filters.document, photo)],
 
         states={
-            # TODO custom values
+
+            START_CONV: [Filters.all, start_conv],
+            
             ASPECT_RATIO: [RegexHandler('^(1/1|4/5|16/9|9/16|9/19|Custom)$', aspect_ratio)],
 
             CUSTOM_AR: [MessageHandler(Filters.text, custom_ar)],
@@ -306,6 +318,7 @@ def main():
     dp.add_handler(conv_handler)
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('help', help))
+    dp.add_handler(CommandHandler('settings', settings))
     dp.add_handler(MessageHandler(Filters.photo, compressed_photo))
 
 
