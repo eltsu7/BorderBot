@@ -94,6 +94,17 @@ def photo(bot, update):
     user_id = update.message.from_user.id
     logger.info("%s sent a file", user.username)
 
+    no_data_text = "Use /settings to set your preferred values first!"
+    
+    if user_id not in data:
+        bot.send_message(chat_id=update.message.chat_id, text=no_data_text)
+        return
+    
+    if "cs" not in data[user_id] or "ar" not in data[user_id]:
+        bot.send_message(chat_id=update.message.chat_id, text=no_data_text)
+        return
+
+
     valid_file_types = ["image/png", "image/jpeg"]
 
     if update.message.document.mime_type not in valid_file_types:
@@ -109,20 +120,7 @@ def photo(bot, update):
     photo_file = bot.get_file(update.message.document.file_id)
     photo_file.download(str(user_id) + '.jpeg')
 
-    if user_id in data:
-        if "cs" in data[user_id] and "ar" in data[user_id]:
-            send_photo(bot, update)
-            return
-
-    return START_CONV
-
-
-def start_conv(bot, update):
-
-    reply_keyboard = ASPECT_KEYBOARD
-    update.message.reply_text(ASPECT_QUESTION, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
-
-    return ASPECT_RATIO
+    send_photo(bot, update)
 
 
 def aspect_ratio(bot, update):
@@ -190,7 +188,6 @@ def canvas_size(bot, update):
     global data
     data[user_id]["cs"] = update.message.text
 
-    send_photo(bot,update)
     return ConversationHandler.END
 
 
@@ -211,7 +208,6 @@ def custom_cs(bot, update):
             bot.send_message(chat_id=update.message.chat_id, text='Incorrect value. You have to pick a value between 0 and 3.')
             return CUSTOM_CS
 
-    send_photo(bot, update)
     return ConversationHandler.END
 
 
@@ -276,7 +272,12 @@ def compressed_photo(bot, update):
 
 
 def settings(bot, update):
-    return START_CONV
+    logger.info("%s settings", update.message.from_user.username)
+
+    reply_keyboard = ASPECT_KEYBOARD
+    update.message.reply_text(ASPECT_QUESTION, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+
+    return ASPECT_RATIO
 
 
 
@@ -297,11 +298,9 @@ def main():
 
     # Add conversation handler with the states ASPECT_RATIO, CANVAS_SIZE, LOCATION and BIO
     conv_handler = ConversationHandler(
-        entry_points=[MessageHandler(Filters.document, photo)],
+        entry_points=[CommandHandler('settings', settings)],
 
         states={
-
-            START_CONV: [Filters.all, start_conv],
             
             ASPECT_RATIO: [RegexHandler('^(1/1|4/5|16/9|9/16|9/19|Custom)$', aspect_ratio)],
 
@@ -321,6 +320,7 @@ def main():
     dp.add_handler(CommandHandler('help', help))
     dp.add_handler(CommandHandler('settings', settings))
     dp.add_handler(MessageHandler(Filters.photo, compressed_photo))
+    dp.add_handler(MessageHandler(Filters.document, photo))
 
 
     # log all errors
