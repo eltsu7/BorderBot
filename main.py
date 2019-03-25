@@ -123,7 +123,7 @@ def start_conv(bot, update):
     update.message.reply_text(ASPECT_QUESTION, reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
 
     return ASPECT_RATIO
-    
+
 
 def aspect_ratio(bot, update):
 
@@ -276,6 +276,7 @@ def compressed_photo(bot, update):
 
 
 def settings(bot, update):
+    return START_CONV
 
 
 
