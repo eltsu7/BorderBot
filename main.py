@@ -248,8 +248,6 @@ def error(bot, update, error):
     logger.warning('Update "%s" caused error "%s"', update, error)
 
 def delete_data(update):
-    user_id = update.message.from_user.id
-
     chat_id = update.message.chat.id
     filename = str(chat_id) + '.jpeg'
 
@@ -282,6 +280,18 @@ def settings(bot, update):
     return ASPECT_RATIO
 
 
+def current_settings(bot, update):
+    user_id = update.message.from_user.id
+
+    if user_id in data:
+
+        ar = str(data[user_id]["ar"])
+        cs = str(data[user_id]["cs"])
+
+        txt = "Aspect ratio = {}, Canvas size = {}".format(ar, cs)
+
+        bot.send_message(chat_id=update.message.chat.id, text=txt)
+
 
 def help(bot, update):
     txt =   "1. Send an uncompressed image\n" \
@@ -290,6 +300,7 @@ def help(bot, update):
             "4. Profit"
 
     bot.send_message(chat_id=update.message.chat.id, text=txt)
+
 
 def main():
     # Create the EventHandler and pass it your bot's token.
@@ -321,6 +332,7 @@ def main():
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('help', help))
     dp.add_handler(CommandHandler('settings', settings))
+    dp.add_handler(CommandHandler('current', current_settings))
     dp.add_handler(MessageHandler(Filters.photo, compressed_photo))
     dp.add_handler(MessageHandler(Filters.document, photo))
 
