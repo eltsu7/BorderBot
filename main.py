@@ -298,8 +298,8 @@ def current_settings(bot, update):
 
 
 def help(bot, update):
-    txt =   "1. Send an uncompressed image\n" \
-            "2. Press buttons\n" \
+    txt =   "1. Set values using /settings\n" \
+            "2. Send an uncompressed image\n" \
             "3. ???\n" \
             "4. Profit"
 
