@@ -282,15 +282,19 @@ def settings(bot, update):
 
 def current_settings(bot, update):
     user_id = update.message.from_user.id
+    global data
 
     if user_id in data:
-
         ar = str(data[user_id]["ar"])
         cs = str(data[user_id]["cs"])
 
         txt = "Aspect ratio = {}, Canvas size = {}".format(ar, cs)
 
-        bot.send_message(chat_id=update.message.chat.id, text=txt)
+    else:
+        txt = "No values set, use /settings to set them."
+
+    bot.send_message(chat_id=update.message.chat.id, text=txt)
+
 
 
 def help(bot, update):
