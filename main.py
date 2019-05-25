@@ -94,7 +94,7 @@ def photo(bot, update):
     user_id = update.message.from_user.id
     logger.info("%s sent a file", user.username)
 
-    no_data_text = "Use /settings to set your preferred values first!"
+    no_data_text = "Use /settings to set your preferred values first, then resend the file. Tip: you can also forward the file to me again."
     
     if user_id not in data:
         bot.send_message(chat_id=update.message.chat_id, text=no_data_text)
@@ -215,7 +215,7 @@ def send_photo(bot, update):
     user_id = update.message.from_user.id
     chat_id = update.message.chat.id
 
-    update.message.reply_text("Thanks! This will take a few seconds :).", reply_markup=ReplyKeyboardRemove())
+    sent_message = bot.send_message(chat_id=chat_id, text='Working on your file...', reply_markup=ReplyKeyboardRemove())
 
     ar = float(data[user_id]["ar"])
     cs = float(data[user_id]["cs"])
@@ -226,6 +226,8 @@ def send_photo(bot, update):
 
     pic.save(os.path.join(PREFIX+filename), 'JPEG', quality=JPEG_QUALITY, optimize=True)
     bot.send_document(chat_id=chat_id, document=open((PREFIX + filename), 'rb'))
+
+    bot.delete_message(chat_id, sent_message.message_id)
 
     delete_data(update)
 
